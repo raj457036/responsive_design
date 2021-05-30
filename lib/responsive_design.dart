@@ -104,6 +104,7 @@ class RDesignSpec {
   final RValue<bool> invisible;
   final RValue<Axis> axis;
   final RValue<int>? spans;
+  final CrossAxisAlignment crossAxisAlignment;
 
   const RDesignSpec({
     required this.gutter,
@@ -112,6 +113,7 @@ class RDesignSpec {
     required this.invisible,
     required this.axis,
     required this.spans,
+    required this.crossAxisAlignment,
   });
 
   RDesignSpec copyWith({
@@ -121,6 +123,7 @@ class RDesignSpec {
     RValue<bool>? invisible,
     RValue<Axis>? axis,
     RValue<int>? spans,
+    CrossAxisAlignment? crossAxisAlignment,
   }) {
     return RDesignSpec(
       gutter: gutter ?? this.gutter,
@@ -129,6 +132,7 @@ class RDesignSpec {
       invisible: invisible ?? this.invisible,
       axis: axis ?? this.axis,
       spans: spans ?? this.spans,
+      crossAxisAlignment: crossAxisAlignment ?? this.crossAxisAlignment,
     );
   }
 }
@@ -190,14 +194,15 @@ class RFlex {
 
     final gutter = designSpec.gutter.active(width);
     if (gutter != null)
-      _tempChildrens = _tempChildrens
-          .map(
-            (e) => Padding(
-              padding: EdgeInsets.symmetric(vertical: gutter / 2),
-              child: e,
-            ),
-          )
-          .toList();
+      _tempChildrens = [
+        for (var i = 0; i < childrens.length; i++)
+          Container(
+            padding: (i != childrens.length - 1)
+                ? EdgeInsets.only(bottom: gutter)
+                : null,
+            child: childrens[i],
+          ),
+      ];
 
     final child = Flex(
       direction: Axis.vertical,
@@ -206,7 +211,7 @@ class RFlex {
 
     return Container(
       padding: designSpec.padding.active(width),
-      margin: designSpec.padding.active(width),
+      margin: designSpec.margin.active(width),
       decoration: decoration,
       child: child,
     );
@@ -237,6 +242,7 @@ class RFlex {
       padding: designSpec.padding.active(width),
       margin: designSpec.margin.active(width),
       child: Flex(
+        crossAxisAlignment: designSpec.crossAxisAlignment,
         verticalDirection: VerticalDirection.down,
         direction: designSpec.axis.active(width) ?? Axis.horizontal,
         clipBehavior: Clip.antiAlias,
@@ -244,17 +250,15 @@ class RFlex {
           for (int i = 0; i < count; i++)
             if (!(designSpec.invisible.active(width) ?? false))
               Container(
-                padding: EdgeInsets.symmetric(horizontal: gutter / 2),
+                padding:
+                    (i != count - 1) ? EdgeInsets.only(right: gutter) : null,
                 child: childrens[i],
                 width: widths[i],
               ),
           if (_diff != null)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: gutter / 2),
-              child: RCol(
-                spans: RValue.all(_diff!),
-                children: [_kEmptyBox],
-              ),
+            RCol(
+              spans: RValue.all(_diff!),
+              children: [_kEmptyBox],
             ),
         ],
       ),
@@ -270,6 +274,7 @@ class RRow extends StatelessWidget {
   final RValue<Axis> axis;
   final RValue<int>? spans;
   final List<Widget> children;
+  final CrossAxisAlignment crossAxisAlignment;
 
   const RRow({
     Key? key,
@@ -281,6 +286,7 @@ class RRow extends StatelessWidget {
     this.axis = const RValue.all(Axis.horizontal),
     this.spans = const RValue.all(12),
     required this.children,
+    this.crossAxisAlignment = CrossAxisAlignment.center,
   }) : super(key: key);
 
   @override
@@ -292,6 +298,7 @@ class RRow extends StatelessWidget {
       margin: margin,
       padding: padding,
       spans: spans,
+      crossAxisAlignment: crossAxisAlignment,
     );
 
     final flex = RFlex(designSpec: designSpec, childrens: children);
@@ -311,6 +318,7 @@ class RCol extends StatelessWidget {
   final RValue<bool> invisible;
   final RValue<int>? spans;
   final List<Widget> children;
+  final CrossAxisAlignment crossAxisAlignment;
 
   const RCol({
     Key? key,
@@ -321,6 +329,7 @@ class RCol extends StatelessWidget {
     this.invisible = const RValue.all(false),
     this.spans = const RValue.all(1),
     required this.children,
+    this.crossAxisAlignment = CrossAxisAlignment.center,
   }) : super(key: key);
 
   @override
@@ -332,6 +341,7 @@ class RCol extends StatelessWidget {
       margin: margin,
       padding: padding,
       spans: spans,
+      crossAxisAlignment: crossAxisAlignment,
     );
 
     final flex = RFlex(
