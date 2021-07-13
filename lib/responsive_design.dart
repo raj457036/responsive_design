@@ -157,7 +157,12 @@ class RFlex {
     for (int i = 0; i < childrens.length; i++) {
       var item = childrens[i];
       if (item is RCol) {
-        _tempSpans.add(item.spans?.active(length) ?? 1);
+        final invisible = item.invisible.active(length) ?? false;
+
+        if (invisible)
+          _tempSpans.add(0);
+        else
+          _tempSpans.add(item.spans?.active(length) ?? 1);
         continue;
       }
       _tempSpans.add(1);
@@ -180,7 +185,7 @@ class RFlex {
     final singleSpanLength = length / spans;
 
     for (var span in _tempSpans) {
-      final width = singleSpanLength * span;
+      final width = span == kMaxColumns ? length : singleSpanLength * span;
       _tempWidths.add(width);
     }
 
@@ -236,7 +241,39 @@ class RFlex {
     final widths = spanToWidth(length);
 
     final count = _diff != null ? widths.length - 1 : widths.length;
-    final gutter = designSpec.gutter.active(width) ?? 0;
+    final gutter = designSpec.gutter.active(width);
+    final direction = designSpec.axis.active(width) ?? Axis.horizontal;
+
+    List<Widget> _elements = <Widget>[];
+
+    for (int i = 0; i < count; i++) {
+      if (!(designSpec.invisible.active(width) ?? false) && widths[i] != 0) {
+        EdgeInsetsGeometry? _gutter;
+
+        final isSecondLast = i != count - 1;
+
+        if (isSecondLast && gutter != null) {
+          if (direction == Axis.horizontal)
+            _gutter = EdgeInsets.only(right: gutter);
+          else
+            _gutter = EdgeInsets.only(bottom: gutter);
+        }
+
+        final element = Container(
+          padding: _gutter,
+          child: childrens[i],
+          width: widths[i],
+        );
+        _elements.add(element);
+      }
+    }
+    if (_diff != null)
+      _elements.add(
+        RCol(
+          spans: RValue.all(_diff!),
+          children: [_kEmptyBox],
+        ),
+      );
 
     return Container(
       padding: designSpec.padding.active(width),
@@ -244,30 +281,15 @@ class RFlex {
       child: Flex(
         crossAxisAlignment: designSpec.crossAxisAlignment,
         verticalDirection: VerticalDirection.down,
-        direction: designSpec.axis.active(width) ?? Axis.horizontal,
+        direction: direction,
         clipBehavior: Clip.antiAlias,
-        children: [
-          for (int i = 0; i < count; i++)
-            if (!(designSpec.invisible.active(width) ?? false))
-              Container(
-                padding:
-                    (i != count - 1) ? EdgeInsets.only(right: gutter) : null,
-                child: childrens[i],
-                width: widths[i],
-              ),
-          if (_diff != null)
-            RCol(
-              spans: RValue.all(_diff!),
-              children: [_kEmptyBox],
-            ),
-        ],
+        children: _elements,
       ),
     );
   }
 }
 
 class RRow extends StatelessWidget {
-  final bool nested;
   final RValue<double> gutter;
   final RValue<EdgeInsetsGeometry> padding, margin;
   final RValue<bool> invisible;
@@ -278,7 +300,6 @@ class RRow extends StatelessWidget {
 
   const RRow({
     Key? key,
-    this.nested = false,
     this.gutter = const RValue.all(0.0),
     this.padding = const RValue.all(EdgeInsets.zero),
     this.margin = const RValue.all(EdgeInsets.zero),
