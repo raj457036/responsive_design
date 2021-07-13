@@ -1,6 +1,6 @@
 name: responsive_design
-description: A new Flutter package project.
-version: 0.0.1
+description: Easiest Set of widgets to build responsive apps with 12 Column Grid System in flutter.
+version: 0.0.2
 author: Raj Singh
 
 environment:
