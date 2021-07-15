@@ -150,19 +150,19 @@ class RFlex {
     this.childrens = const [],
   });
 
-  List<double> spanToWidth(double length) {
+  List<double> spanToWidth(double length, double width) {
     final _tempSpans = <int>[];
     final _tempWidths = <double>[];
 
     for (int i = 0; i < childrens.length; i++) {
       var item = childrens[i];
       if (item is RCol) {
-        final invisible = item.invisible.active(length) ?? false;
+        final invisible = item.invisible.active(width) ?? false;
 
         if (invisible)
           _tempSpans.add(0);
         else
-          _tempSpans.add(item.spans?.active(length) ?? 1);
+          _tempSpans.add(item.spans?.active(width) ?? 1);
         continue;
       }
       _tempSpans.add(1);
@@ -209,8 +209,9 @@ class RFlex {
           ),
       ];
 
+    final axis = designSpec.axis.active(width) ?? Axis.vertical;
     final child = Flex(
-      direction: Axis.vertical,
+      direction: axis,
       children: _tempChildrens,
     );
 
@@ -230,15 +231,19 @@ class RFlex {
   Widget buildWithConstraints(
     BuildContext context,
     BoxConstraints constraints,
+    bool? useParentGrid,
   ) {
+    final parentGrid =
+        useParentGrid ?? RGridConfig.of(context)?.useParentGrid ?? false;
     final width = getSize(context).width;
 
-    if (constraints.maxWidth.isInfinite) return buildFlex(width, width);
+    if (!parentGrid || constraints.maxWidth.isInfinite)
+      return buildFlex(width, width);
     return buildFlex(constraints.maxWidth, width);
   }
 
   Widget buildFlex(double length, double width) {
-    final widths = spanToWidth(length);
+    final widths = spanToWidth(length, width);
 
     final count = _diff != null ? widths.length - 1 : widths.length;
     final gutter = designSpec.gutter.active(width);
@@ -289,7 +294,29 @@ class RFlex {
   }
 }
 
+class RGridConfig extends InheritedWidget {
+  final bool useParentGrid;
+
+  RGridConfig({
+    Key? key,
+    required this.child,
+    required this.useParentGrid,
+  }) : super(key: key, child: child);
+
+  final Widget child;
+
+  static RGridConfig? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<RGridConfig>();
+  }
+
+  @override
+  bool updateShouldNotify(RGridConfig oldWidget) {
+    return true;
+  }
+}
+
 class RRow extends StatelessWidget {
+  final bool? useParentGridSystem;
   final RValue<double> gutter;
   final RValue<EdgeInsetsGeometry> padding, margin;
   final RValue<bool> invisible;
@@ -300,6 +327,7 @@ class RRow extends StatelessWidget {
 
   const RRow({
     Key? key,
+    this.useParentGridSystem,
     this.gutter = const RValue.all(0.0),
     this.padding = const RValue.all(EdgeInsets.zero),
     this.margin = const RValue.all(EdgeInsets.zero),
@@ -326,7 +354,8 @@ class RRow extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        return flex.buildWithConstraints(context, constraints);
+        return flex.buildWithConstraints(
+            context, constraints, useParentGridSystem);
       },
     );
   }
